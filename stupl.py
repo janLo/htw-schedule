@@ -255,8 +255,8 @@ def filterLectures(data, lectures, teacher_blacklist):
     The output is the same structure like joinTables and iterateTable
     have.
     """
-    lectures = map(str.upper, lectures)
-    teacher_blacklist = map(str.upper, teacher_blacklist)
+    lectures = map(unicode.upper, lectures)
+    teacher_blacklist = map(unicode.upper, teacher_blacklist)
     days = data['data']
     order = data['order']
     new_days = []
@@ -465,7 +465,9 @@ def process(interrest, lectures, teacher_blacklist):
     for week in range(args.start - 1, args.stop):
         tables = [iterateTable(s['table'][week]) for s in soups]
         table = joinTables(tables)
-        filtered = filterLectures(table, args.lectures, args.blacklist)
+        filtered = filterLectures(table, 
+                                  [unicode(x, 'utf-8') for x in args.lectures], 
+                                  [unicode(x, 'utf-8') for x in args.blacklist])
         table_data.append(filtered)
 
 
