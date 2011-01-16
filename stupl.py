@@ -458,7 +458,7 @@ def process(interrest, lectures, teacher_blacklist):
     if len(args.courses) > 1:
         my_map = make_async_map(len(args.courses))
 
-    soups = my_map(get_soups, interrest)
+    soups = my_map(get_soups, args.courses)
 
     table_data = []
 
