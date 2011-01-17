@@ -80,8 +80,9 @@ def extract_soups(page):
     body = soup.html.body
     headline = body.findAll('h2')[0]
     table = []
-    for week in range(0, 4):
-        table.append(body.findAll('table')[2 + (week*2)])
+    html_tables = body.findAll('table')
+    for week in range(0, (len(html_tables) - 2) / 2):
+        table.append(html_tables[2 + (week*2)])
     return {'headline': headline,
             'table': table}
 
