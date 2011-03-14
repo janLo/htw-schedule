@@ -12,6 +12,7 @@ from multiprocessing import pool
 import argparse
 import time
 import sys
+import re
 
 
 def get_color(idx):
@@ -141,10 +142,9 @@ def splitCell(cell):
     The returned value is a list of lecture dicts (if any or a empty list
     else).
     """
-    st = BeautifulStoneSoup(unicode(cell.renderContents('utf-8'), 'utf-8'),
+    st = BeautifulStoneSoup(unicode(cell.renderContents('utf-8').replace('<br />', '\n'), 'utf-8'),
                             convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
-    elements = unicode(st.renderContents('utf-8'),
-                       'utf-8').replace('<br></br>', '\n').split('\n\n')
+    elements = unicode(st.renderContents('utf-8'),'utf-8').split('\n\n')
     lectures = []
     for elem in elements:
 
