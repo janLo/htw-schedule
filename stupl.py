@@ -405,15 +405,15 @@ def make_async_map(cnt):
 
     The returned function is equivalent to map().
     """
-    if cnt > 5:
-        cnt = 5
+    if cnt > 3:
+        cnt = 3
     p = Pool(cnt)
 
     def map_async_delayed(func, iterable):
 
         def async_apply(item):
             res = p.apply_async(func, [item])
-            time.sleep(0.1)
+            time.sleep(0.2)
             return res
 
         def sync_get(item):
@@ -484,7 +484,8 @@ def make_ical(data, sources):
                         teacher = room_match.group(2)
 
                     event.add('summary').value = "%s%s" % (entry['name'], cat)
-                    event.add('description').value = "%s\n%s\n%s" % (teacher,
+                    event.add('description').value = u"Kürzel: %s\nDozent: %s\nVeranstaltungsdyp: %s\nQuelle:%s" % (entry["short"],
+                                                                     teacher,
                                                                      entry["typ"],
                                                                      sources[entry['source']].string)
                     uid = uuid.uuid3(uuid.NAMESPACE_DNS, '%s %s' % (str(event.location.value),
@@ -538,7 +539,7 @@ def process(interrest, lectures, teacher_blacklist):
         args.stop = args.start
 
     my_map = map
-    if len(args.courses) > 8:
+    if len(args.courses) > 3:
         my_map = make_async_map(len(args.courses))
 
     soups = my_map(get_soups, args.courses)
