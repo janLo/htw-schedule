@@ -413,7 +413,7 @@ def make_async_map(cnt):
 
         def async_apply(item):
             res = p.apply_async(func, [item])
-            time.sleep(0.2)
+            time.sleep(0.1)
             return res
 
         def sync_get(item):
@@ -474,7 +474,7 @@ def make_ical(data, sources):
                     event.add('dtend').value = day_date + times[time]["end"]
                     cat = ""
                     if entry["typ"][0] in cat_map:
-                        event.add('category').value = cat_map[entry["typ"][0]]
+                        event.add('categories').value = ["UNI:" + cat_map[entry["typ"][0]]]
                         cat = " (%s)" % cat_map[entry["typ"][0]]
 
                     teacher = entry["room"]
@@ -492,8 +492,7 @@ def make_ical(data, sources):
                                                                     str(event.dtstart.value)))
                     event.add("uid").value = str(uid)
 
-
-        return calendar.serialize()
+    return calendar.serialize()
 
         
 
@@ -581,7 +580,6 @@ if __name__ == '__main__':
                 'Mathe',
                 'BuA',
                 'PW',
-                'GdWI',
                 'WiMathe']
 
     teacher_blacklist = []
