@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# vim: set encoding:utf8
 
 """Parsing and processing the HTW schedule"""
 
@@ -9,8 +10,12 @@ from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 from multiprocessing import Pool
 from multiprocessing import pool
+from datetime import datetime
+import dateutil.relativedelta as rd
+import vobject
 import argparse
 import time
+import uuid
 import sys
 import re
 
@@ -20,7 +25,7 @@ def get_color(idx):
 
     This is used to color the html output.
     """
-    colors = ["red", "blue", "green", "yellow", "orange", "gray"]
+    colors = ["red", "blue", "green", "#dddd33", "orange", "gray", '#5555bb', 'pink']
     return colors[idx % len(colors)]
 
 
@@ -420,6 +425,80 @@ def make_async_map(cnt):
     return map_async_delayed
 
 
+class CannotParseCalweek(Exception):
+    pass
+
+
+class CannotParseTime(Exception):
+    pass
+
+
+def make_ical(data, sources):
+    calweek_regex = re.compile(r'^(\d+)\. KW$')
+    time_regex = re.compile(r'^(\d+)\.(\d+) - (\d+)\.(\d+)$')
+    room_regex = re.compile(r'^(.*) - (.*)$')
+
+    times = {}
+    for time in data[0]['order']:
+        matches = time_regex.match(time)
+        if not matches:
+            raise CannotParseTime("String was: %s" % time)
+        newtime = {'start': rd.relativedelta(hour=int(matches.group(1)), minute=int(matches.group(2))),
+                   'end': rd.relativedelta(hour=int(matches.group(3)), minute=int(matches.group(4)))}
+        times[time] = newtime
+
+    calendar = vobject.iCalendar()
+
+    cat_map = {u"V": u"Vorlesung",
+               u"Ü": u"Übung",
+               u"P": u"Praktikum"}
+
+    begin_date = None
+    for week in data:
+        if not begin_date:
+            calweek = calweek_regex.match(week['week'])
+            if not calweek:
+                raise CannotParseCalweek("String was: %s" % week['week'])
+            calweek = int(calweek.group(1))
+            begin_date = datetime.now() + rd.relativedelta(month=1, day=4, weekday=rd.MO(-1), weeks=+(calweek - 1), hour=0, minute=0, second=0, microsecond=0)
+        else:
+            begin_date = begin_date + rd.relativedelta(weeks=+1)
+
+        for day in range(0,5):
+            day_data = week['data'][day]
+            day_date = begin_date + rd.relativedelta(days=+day)
+            for time in day_data:
+                for entry in day_data[time]:
+                    event = calendar.add('vevent')
+                    event.add('dtstart').value = day_date + times[time]["start"]
+                    event.add('dtend').value = day_date + times[time]["end"]
+                    cat = ""
+                    if entry["typ"][0] in cat_map:
+                        event.add('category').value = cat_map[entry["typ"][0]]
+                        cat = " (%s)" % cat_map[entry["typ"][0]]
+
+                    teacher = entry["room"]
+                    room_match = room_regex.match(entry["room"])
+                    if room_match:
+                        event.add('location').value = room_match.group(1).strip()
+                        teacher = room_match.group(2)
+
+                    event.add('summary').value = "%s%s" % (entry['name'], cat)
+                    event.add('description').value = "%s\n%s\n%s" % (teacher,
+                                                                     entry["typ"],
+                                                                     sources[entry['source']].string)
+                    uid = uuid.uuid3(uuid.NAMESPACE_DNS, '%s %s' % (str(event.location.value),
+                                                                    str(event.dtstart.value)))
+                    event.add("uid").value = str(uid)
+
+
+        return calendar.serialize()
+
+        
+
+
+
+
 def process(interrest, lectures, teacher_blacklist):
     """Process commandline arguments an DO stuff.
 
@@ -429,6 +508,9 @@ def process(interrest, lectures, teacher_blacklist):
     parser = argparse.ArgumentParser(description=('Rape the HTW schedule! '
                                                   ' You can filter, combine,'
                                                   'blacklist.'))
+    parser.add_argument('--ical', "-i",
+                        action='store_const', const=True, default=False,
+                        help="Output as Ical (ignore html option)!")
     parser.add_argument('--html', "-v",
                         action='store_const', const=True, default=False,
                         help="Output as raw HTML!")
@@ -456,7 +538,7 @@ def process(interrest, lectures, teacher_blacklist):
         args.stop = args.start
 
     my_map = map
-    if len(args.courses) > 1:
+    if len(args.courses) > 8:
         my_map = make_async_map(len(args.courses))
 
     soups = my_map(get_soups, args.courses)
@@ -471,6 +553,9 @@ def process(interrest, lectures, teacher_blacklist):
                                   [unicode(x, 'utf-8') for x in args.blacklist])
         table_data.append(filtered)
 
+    if args.ical:
+        print make_ical(table_data, [s["headline"] for s in soups])
+        sys.exit(0)
 
     if args.html:
         print make_html([s["headline"] for s in soups], table_data, args.start)
@@ -481,19 +566,23 @@ def process(interrest, lectures, teacher_blacklist):
 
 
 if __name__ == '__main__':
-    interrest = ['08/042/62',
-                 '08/042/61',
-                 '10/042/51']
+    interrest = ['09/042/51',
+                 '09/042/61',
+                 '09/042/62',
+                 '09/042/63',
+                 '10/042/51',
+                 '10/042/61',
+                 '10/042/62',
+                 '10/042/63']
 
-    lectures = ['EWA',
-                'BIS',
-                'IM',
-                'Marketing',
-                'MMT',
-                'Prog',
-                'PS3',
+    lectures = ['CS',
+                'GPM',
+                'Mathe',
+                'BuA',
+                'PW',
+                'GdWI',
                 'WiMathe']
 
-    teacher_blacklist = ['Hollas']
+    teacher_blacklist = []
 
     process(interrest, lectures, teacher_blacklist)
